@@ -111,7 +111,7 @@ def find_children(g_num, graph_names):
     return count
 
 
-def get_some_parameters(g_num, name):
+def get_some_parameters_old(g_num, name):
     """Get necessary parameters for model
     Parameters: 
                 g_num (int): genealogical network number (i.e., the dataset you want to use for the model)
@@ -190,3 +190,68 @@ def get_some_parameters(g_num, name):
     text_file.close()
 
     return m_e, P, NCP, inf_dis
+
+
+def get_some_parameters(name):
+    """Get necessary parameters for model
+    Parameters: 
+                name (str): name of chosen network from the Kinsource data
+    
+    Returns:
+                m_e (int): number of marriage edges in genealogical network
+                P (float): probability of marriage
+                NCP (float): probability of non-connected marriage
+    """
+    
+    # load all original sources
+    graphs, graph_names = get_graphs_and_names()   # graphs is a list of all Kinsource graphs
+                                                   # graph_names is a list of Kinsource graph file names 
+    # get number of chosen graph
+    g_num = graph_names.index('./Original_Sources/kinsources-'+name+'-oregraph.paj')
+    
+    # genealogical network
+    G = graphs[g_num]
+
+    # get total number of nodes in network
+    total = G.number_of_nodes()
+
+    # Gives the number of males, females, unknown, marriage edges, parent-child edges in network
+    attribs = count_attributes(G)
+    
+    # get number of marriage edges in network
+    m_e = attribs[3]
+
+    # get probability of marriage
+    P = m_e*2/total
+    
+    # get all parts of graph
+    stuff = separate_parts(graph_names[g_num],'A')
+
+    # list of marriage edge tuples for the given network
+    marriages = stuff[1]
+    
+    # list of parent-child edge tuples for the given network
+    children = stuff[2]
+    
+    # get set of nodes that are married
+    all_married = set()
+    for pair in marriages:
+        all_married.add(pair[0])
+        all_married.add(pair[1])
+    all_married  # set of all nodes that are married
+    
+    # get set of nodes that are children
+    all_children = set()
+    for pc in children:
+        child = pc[1]
+        all_children.add(child)
+    all_children  # set of all nodes that are children
+
+    # get nodes that are married but are not children
+    not_children = all_married - all_children
+
+    # get probability of non-connected marriage
+    NCP = len(not_children)/len(all_married)
+    
+    return m_e, P, NCP
+
