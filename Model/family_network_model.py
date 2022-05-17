@@ -9,6 +9,7 @@ from sklearn.neighbors import KernelDensity as KDE
 from scipy import interpolate
 import itertools
 import pickle
+import os 
 
 
 def add_marriage_edges(all_fam, all_unions, D, marriage_probs, p, ncp, n, infdis):
@@ -294,6 +295,8 @@ def human_family_network(n, gen, marriage_dist, p, ncp, infdis, children_dist, n
              all_children (list): list of number of children per union since generation 0
     
     """
+    # Generate an output directory
+    output_path = makeOutputDirectory("output", name)
 
     # generate empty graph
     G = nx.Graph()
@@ -345,17 +348,18 @@ def human_family_network(n, gen, marriage_dist, p, ncp, infdis, children_dist, n
     for i in range(gen+1):
         print('generation: ', i)
         
-        # save output at each generation
+        # TODO THIS IS THE SAVED OUTPUT
+        # # save output at each generation
         Gname = "{}_G{}.gpickle".format(name, i)   # save graph
-        nx.write_gpickle(G, Gname)
+        # nx.write_gpickle(G, Gname)
         Dname = "{}_D{}.npy".format(name, i)   # save D
-        np.save(Dname, D)
+        # np.save(Dname, D)
         Uname = "{}_U{}".format(name, i)   # save unions
-        with open(Uname, 'wb') as fup:
-            pickle.dump(all_unions, fup) 
+        # with open(Uname, 'wb') as fup:
+        #     pickle.dump(all_unions, fup) 
         Cname = "{}_C{}".format(name, i)   # save children
-        with open(Cname, 'wb') as fcp:
-            pickle.dump(all_children, fcp)   
+        # with open(Cname, 'wb') as fcp:
+        #     pickle.dump(all_children, fcp)   
         
         # create unions between nodes to create next generation
         unions, no_unions, all_unions, n, m, infdis = add_marriage_edges(all_fam, all_unions, D, marriage_probs, p, ncp, n, infdis)
@@ -383,17 +387,46 @@ def human_family_network(n, gen, marriage_dist, p, ncp, infdis, children_dist, n
         # save output of last generation
         if i == gen:
             print("Last generation: ", i+1)
-            Gname = "{}_G{}.gpickle".format(name, i+1)   # save graph
+            Gname = "{}_G{}.gpickle".format(output_path, i+1)   # save graph
             nx.write_gpickle(G, Gname)
-            Dname = "{}_D{}.npy".format(name, i+1)   # save D
+            Dname = "{}_D{}.npy".format(output_path, i+1)   # save D
             np.save(Dname, D)
-            Uname = "{}_U{}".format(name, i+1)   # save unions
+            Uname = "{}_U{}".format(output_path, i+1)   # save unions
             with open(Uname, 'wb') as fup:
                 pickle.dump(all_unions, fup) 
-            Cname = "{}_C{}".format(name, i+1)   # save children
+            Cname = "{}_C{}".format(output_path, i+1)   # save children
             with open(Cname, 'wb') as fcp:
                 pickle.dump(all_children, fcp)
     
     print(G.number_of_nodes())
         
     return G, D, all_unions, all_children, infdis
+
+
+
+
+
+def makeOutputDirectory(out_directory, name):
+    """Make an output directory to keep things cleaner
+    
+    Returns a full output path to the new directory"""
+    full_output_path = os.path.join(out_directory, name)
+    if os.path.exists(full_output_path):
+        i = 1
+        done = False
+        full_output_path = full_output_path + f"_{i}"
+
+        # Iterate until we have a unique directory name and make it
+        while not done:
+            if not os.path.exists(full_output_path):
+                os.mkdir(full_output_path)
+                done = True
+            else:
+                num_digits_to_remove = len(str(i)) + 1      # The + 1 is for the underscore
+                full_output_path = full_output_path[:-num_digits_to_remove]
+                i += 1 
+                full_output_path += f"_{i}"
+
+    return full_output_path
+
+
