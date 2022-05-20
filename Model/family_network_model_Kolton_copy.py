@@ -12,22 +12,65 @@ import pickle
 from time import time
 from functools import wraps
 
-def timeit(func):
+# def timeit(func):
+#     """
+#     :param func: Decorated function
+#     :return: Execution time for the decorated function
+#     """
+#
+#     @wraps(func)
+#     def wrapper(*args, **kwargs):
+#         start = time()
+#         result = func(*args, **kwargs)
+#         end = time()
+#         print(f'{func.__name__} executed in {end - start:.4f} seconds')
+#         return result
+#
+#     return wrapper
+people = [k for k in range(10)]
+prob_marry_immigrant = 0.2
+prob_marry = 0.6
+def kolton_add_marriage_edges(people, prob_marry_immigrant, prob_marry, D, indices):
     """
-    :param func: Decorated function
-    :return: Execution time for the decorated function
+    people:  (list) of the current generation (IE those people elligible for
+            marriage)
+    prob_marry_immigrant: (float) the probablility that a given node will marry
+            a immigrant (herein a person from outside the genealogical network,
+            without comon ancestor and therefore at distance infinity from the
+            nodes in the list 'people') (formerly 'ncp')
+    prob_marry: (float) the probability that a given node will marry another
+            node in people
+    D: ((people x people) numpy array) indexed array of distance between nodes in people (siblings are distance 2)
+    indices: (dictionary) maps node name (int) to index number in D (int)
+
     """
+    people_set = set(people)  # for fast removal later
+    # find the next 'name' to add to your set of people
+    next_person = np.max(people) + 1
+    # number of non-connected people to add
+    num_immigrants = round(prob_marry_immigrant * len(people))  # m
+    # marry off the immigrants at random to nodes in the current generation
+    marry_strangers = np.random.choice(people, size=num_immigrants)
+    unions = {(spouse, immigrant) for spouse, immigrant
+                                    in zip(marry_strangers,
+                                           range(next_person, next_person + num_immigrants))}
+    # remove the married people from the pool #2ndManifesto
+    people_set = people_set - set(marry_strangers)
 
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        start = time()
-        result = func(*args, **kwargs)
-        end = time()
-        print(f'{func.__name__} executed in {end - start:.4f} seconds')
-        return result
+    # get number of people to marry
+    num_couples_to_marry = round(len(people_set)*prob_marry/2)
+    # get all possible pairs of the still single nodes
+    # rejecting possible parrings which have a common ancestor more recently
+    # than allowed by marriage_probs (IE this is where we account that siblings
+    # don't marry in most cultures (but still can such as in the tikopia_1930
+    # family network))
+    possible_couples = {(man, woman): D[indices[man]][indices[woman]]
+                        for man, woman in itertools.combinations(people_set, 2)
+                        if D[indices[man]][indices[woman]] > min(marriage_probs)}
+    iter = 0
+    while possible_couples and iter < num_couples_to_marry:
 
-    return wrapper
-
+possible_couples
 def add_marriage_edges(all_fam, all_unions, D, marriage_probs, p, ncp, n, infdis, indices):
     """Add marriage edges to a given generation
     Paramters:
@@ -54,6 +97,8 @@ def add_marriage_edges(all_fam, all_unions, D, marriage_probs, p, ncp, n, infdis
     infdis -= m
     # list of people not connected to family network
     nc_ppl = []
+    print("all_fam: ", all_fam)
+    print("indices: ", indices)
     max_ind = max(indices.values())
     for i in range(1, m+1):
         nc_ppl.append(n+i)
@@ -171,9 +216,7 @@ def add_children_edges(unions, n, child_probs, all_children, indices):
 
     return child_edges, families, n, all_children, indices
 
-n+=1
-families[1]=[8]
-indices = {node:k for k, node in enumerate(range(6))}
+
 def update_distances(D, n, unions, no_unions, families, indices):
     """Build a distance matrix that keeps track of how far away each node is from each other.
         Need to update distances after new nodes added to graph (i.e., after adding children)
@@ -264,10 +307,11 @@ def get_probabilities(data, gen=0):
 
 
 
-n = 4
-gen = 1
+n = 99
+gen = 5
 # marriage distance data of chosen network
 name = "san_marino"
+name = "anuta_1972"
 name = "tikopia_1930"
 with open('./UnionDistances/{}_distances.txt'.format(name)) as f:
     nx_dis = f.readline()
@@ -294,7 +338,7 @@ data_parameters = ast.literal_eval(params)
 m_e = data_parameters[name][0]  # number of marriage edges
 p = data_parameters[name][1]    # probability of marriage
 ncp = data_parameters[name][2]  # probability of nonconnected marriage
-
+name
 @timeit
 def test(n):
     # fill in distances with data
@@ -302,6 +346,7 @@ def test(n):
     D = d + d.T
     return D
 test(1000)
+
 
 
 def human_family_network(n, gen, marriage_dist, p, ncp, infdis, children_dist, name):
@@ -361,10 +406,8 @@ def human_family_network(n, gen, marriage_dist, p, ncp, infdis, children_dist, n
 
     # get probabilities of possible number of children to use in children function
     child_probs = get_probabilities(children_dist)  # dictionary of probabilities of all possible number of children
-sum(marriage_probs.values())
-sum(child_probs.values())
+
     # add specified number of generations to network
-    i = 1
     for i in range(gen+1):
         print('generation: ', i)
 
@@ -390,17 +433,17 @@ sum(child_probs.values())
 
         max_ind = max(indices.values())
         j=0
+        oldn = len(indices) - m
         for j in range(m):
             # add non-connected ppl to distance matrix--infinte distances with everyone else
-            r = np.ones((1,oldn+2+j))*100
+            r = np.ones((1,oldn+1+j))*100
             r[0,-1] = 0  # distance to self is 0
-            c = np.ones((oldn+1+j,1))*100
+            c = np.ones((oldn+j,1))*100
             D = np.hstack((D, c))
             D = np.vstack((D, r))
             #indices[n+j+1] = max_ind + j + 1
 
         # add children to each union
-        n
         children, families, n, all_children, indices = add_children_edges(unions, n, child_probs, all_children, indices)
         G.add_edges_from(children)
         all_fam = functools.reduce(operator.iconcat, families, [])
