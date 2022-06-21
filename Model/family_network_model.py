@@ -257,8 +257,12 @@ def get_probabilities(data, gen=0):
     
     # get kernel density of data
     kde = toKDE(data, bandwidth)
-    x = np.arange(min(data)-1, max(data)+2, 1) # start and stop might need to change
-    domain = x[:,np.newaxis] 
+    
+    ##### START PROBLEM ----------------------------
+    x = np.arange(min(data)-1, 1000, 1)      # TODO start and stop might need to change
+    #### END PROBLEM -------------------------------
+
+    domain = x[:,np.newaxis]                    #### TODO RUN: 2 through 21 
     logs = kde.score_samples(domain)  # evaluate log density model on data
     y = np.exp(logs)  # get density model
 
@@ -268,7 +272,7 @@ def get_probabilities(data, gen=0):
     # create dictionary of probabilities by integrating under density curve
     probs = {}
     keys = set(data)
-    for i in range(min(keys), max(keys)+gen+2):
+    for i in range(min(keys), 1000):     ## TODO THIS IS CAUSING PROBLEMS (no keys above 0 past 21, 
         probs[i] = spl.integral(i-.5, i+5)
 
     return probs
@@ -349,17 +353,17 @@ def human_family_network(n, gen, marriage_dist, p, ncp, infdis, children_dist, n
         print('generation: ', i)
         
         # TODO THIS IS THE SAVED OUTPUT
-        # # save output at each generation
-        Gname = "{}_G{}.gpickle".format(name, i)   # save graph
-        # nx.write_gpickle(G, Gname)
-        Dname = "{}_D{}.npy".format(name, i)   # save D
-        # np.save(Dname, D)
-        Uname = "{}_U{}".format(name, i)   # save unions
-        # with open(Uname, 'wb') as fup:
-        #     pickle.dump(all_unions, fup) 
-        Cname = "{}_C{}".format(name, i)   # save children
-        # with open(Cname, 'wb') as fcp:
-        #     pickle.dump(all_children, fcp)   
+        # save output at each generation
+        Gname = "{}/{}_G{}.gpickle".format(output_path, name, i)   # save graph
+        nx.write_gpickle(G, Gname)
+        Dname = "{}/{}_D{}.npy".format(output_path, name, i)   # save D
+        np.save(Dname, D)
+        Uname = "{}/{}_U{}".format(output_path, name, i)   # save unions
+        with open(Uname, 'wb') as fup:
+            pickle.dump(all_unions, fup) 
+        Cname = "{}/{}_C{}".format(output_path, name, i)   # save children
+        with open(Cname, 'wb') as fcp:
+            pickle.dump(all_children, fcp)   
         
         # create unions between nodes to create next generation
         unions, no_unions, all_unions, n, m, infdis = add_marriage_edges(all_fam, all_unions, D, marriage_probs, p, ncp, n, infdis)
@@ -387,22 +391,20 @@ def human_family_network(n, gen, marriage_dist, p, ncp, infdis, children_dist, n
         # save output of last generation
         if i == gen:
             print("Last generation: ", i+1)
-            Gname = "{}_G{}.gpickle".format(output_path, i+1)   # save graph
+            Gname = "{}/{}_G{}.gpickle".format(output_path, name, i+1)   # save graph
             nx.write_gpickle(G, Gname)
-            Dname = "{}_D{}.npy".format(output_path, i+1)   # save D
+            Dname = "{}/{}_D{}.npy".format(output_path, name, i+1)   # save D
             np.save(Dname, D)
-            Uname = "{}_U{}".format(output_path, i+1)   # save unions
+            Uname = "{}/{}_U{}".format(output_path, name, i+1)   # save unions
             with open(Uname, 'wb') as fup:
                 pickle.dump(all_unions, fup) 
-            Cname = "{}_C{}".format(output_path, i+1)   # save children
+            Cname = "{}/{}_C{}".format(output_path, name, i+1)   # save children
             with open(Cname, 'wb') as fcp:
                 pickle.dump(all_children, fcp)
     
     print(G.number_of_nodes())
         
-    return G, D, all_unions, all_children, infdis
-
-
+    return G, D, all_unions, all_children, infdis, output_path
 
 
 
@@ -419,14 +421,13 @@ def makeOutputDirectory(out_directory, name):
         # Iterate until we have a unique directory name and make it
         while not done:
             if not os.path.exists(full_output_path):
-                os.mkdir(full_output_path)
                 done = True
             else:
                 num_digits_to_remove = len(str(i)) + 1      # The + 1 is for the underscore
                 full_output_path = full_output_path[:-num_digits_to_remove]
                 i += 1 
                 full_output_path += f"_{i}"
-
+    os.mkdir(full_output_path)
     return full_output_path
 
 
